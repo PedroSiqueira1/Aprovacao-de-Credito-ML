@@ -18,6 +18,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
 
 # Importando dados
 
@@ -27,6 +29,7 @@ exemplo = pd.read_csv("exemplo_arquivo_respostas.csv")
 
 
 # Limpando dados
+
 dados.set_index('id_solicitante', inplace=True)
 dados = dados.drop(['grau_instrucao',   # Falha na extração
                     'possui_telefone_celular',  # Falha na extração
@@ -40,7 +43,7 @@ dados = dados.drop(['grau_instrucao',   # Falha na extração
                     'profissao_companheiro', # One Hot encoding muito grande
                     'local_onde_reside', # One Hot encoding muito grande
                     'local_onde_trabalha'],axis=1) # One Hot encoding muito grande
-
+print(dados.meses_na_residencia.value_counts())
 
 dados.loc[dados['sexo'] == ' ','sexo'] = 'N'
 dados.loc[dados['idade'] < 17,'idade'] = 17
@@ -49,6 +52,7 @@ dados.loc[dados['estado_onde_nasceu'] == ' ','estado_onde_nasceu'] = 'N'
 dados['grau_instrucao_companheiro'] = dados['grau_instrucao_companheiro'].fillna(0)
 dados['ocupacao'] = dados['ocupacao'].fillna(2.0)  
 dados['meses_na_residencia'] = dados['meses_na_residencia'].fillna(10.0)  
+
 
 dados_teste.set_index('id_solicitante', inplace=True)
 dados_teste = dados_teste.drop(['grau_instrucao',   # Falha na extração
@@ -64,7 +68,6 @@ dados_teste = dados_teste.drop(['grau_instrucao',   # Falha na extração
                     'local_onde_reside', # One Hot encoding muito grande
                     'local_onde_trabalha' # One Hot encoding muito grande
                     ],axis=1) 
-
 
 dados_teste.loc[dados_teste['sexo'] == ' ','sexo'] = 'N'
 dados_teste.loc[dados_teste['idade'] < 17,'idade'] = 17
@@ -101,7 +104,7 @@ dados_teste = pd.get_dummies(dados_teste,columns=['produto_solicitado',
                                       'tipo_residencia',
                                       'ocupacao'])
 
-# Binarizarda
+# Binarizar
 
 
 binalizer = LabelBinarizer()
@@ -201,11 +204,27 @@ scaler.fit(X_train)
 
 X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test)
-'''
+
+scaler = MinMaxScaler()
+scaler.fit(X)
+X = scaler.transform(X)
+dados_teste = scaler.transform(dados_teste)
+
+# Função para ver resultados
+
+def resultados(grid):
+    results = pd.DataFrame(grid.cv_results_)
+    results.sort_values(by='rank_test_score', inplace=True)
+    results = results[['params','mean_test_score','std_test_score']].head()
+    
+    return results
+
+   
+
 
 '''
 # Validação cruzada
-'''
+
 for k in range(550,600):
     
     classificador = KNeighborsClassifier(
@@ -217,52 +236,126 @@ for k in range(550,600):
           'scores =', scores,
           'acuracia média = %6.1f' % (100*sum(scores)/5)
           )
-'''
-scaler = MinMaxScaler()
-scaler.fit(X)
-X = scaler.transform(X)
 
 
-# KNN
+# Grid KNN
 
+# Melhores Parametros {{'algorithm': 'auto', 'n_neighbors': 161, 'p': 1, 'weights': 'distance'}
+parameters = {
+    "p": [1],
+    "n_neighbors": list(range(121,222,20)),
+    'weights': ['distance'],
+    'algorithm':['auto']
+    }
 
-classificadorKNN = KNeighborsClassifier(
-        n_neighbors = 550)
+gridknn = GridSearchCV(KNeighborsClassifier(), parameters, cv=5, verbose=2, n_jobs =-1)
+gridknn.fit(X,y)
+results = pd.DataFrame(gridknn.cv_results_)
+results.sort_values(by='rank_test_score', inplace=True)
+results = results[['params','mean_test_score','std_test_score']].head()
 
-classificadorKNN = classificadorKNN.fit(X,y)
-resposta_knn = classificadorKNN.predict(dados_teste)
-
+bestknn = gridknn.best_estimator_
+bestknn.fit(X,y)
+respostaknn = bestknn.predict(dados_teste)
 
 
 # Grid SVM
+
+'''
 '''
 parameters = {
-    "kernel": ["rbf"],
-    "C": [1,10,100,1000],
-    "gamma": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
+    "kernel": ['linear', 'poly', 'rbf','sigmoid'],
+    "C": [100,110,120],
+    "gamma": [0.01,0.001,0.0001]
     }
 
-grid = GridSearchCV(SVC(), parameters, cv=5, verbose=2)
+grid = GridSearchCV(SVC(), parameters, cv=4, verbose=2, n_jobs=-1)
 grid.fit(X, y)
-'''
-# Melhores Parametros {'C': 100, 'gamma': 0.001, 'kernel': 'rbf'}
 
+'''
+# Melhores Parametros {'C': 110, 'gamma': 0.001, 'kernel': 'sigmoid'}
+
+'''
 # SVM Kernel
 
-classificadorSVM = SVC(C=100, gamma=0.001)
+classificadorSVM = SVC(C=110, gamma=0.001, kernel='poly',degree=1)
 classificadorSVM.fit(X,y)
 resposta_svm = classificadorSVM.predict(dados_teste)
+'''
+# Grid Random Forest
 
-# Rnadom Forest
+# Melhores Parametros {"max_depth":[8], "max_features": ['auto'], "n_estimators": [500], "min_samples_leaf":[10]} (0.5906)
+parameters = {
+    "max_depth":[8],
+    "max_features": ['auto'],
+    "n_estimators": [500],
+    "min_samples_leaf":[10],
+    "min_samples_split":[12,13,14,15,16,17]
+    }
 
-classificadorRF = RandomForestClassifier()
-classificadorRF.fit(X,y)
-respostaRF = classificadorRF.predict(dados_teste)
+gridRF = GridSearchCV(RandomForestClassifier(), parameters, cv=10, verbose=2, n_jobs = -1)
+gridRF.fit(X, y)
+
+resultadosRF = resultados(gridRF)
+bestRF = gridRF.best_estimator_
+bestRF.fit(X,y)
+respostaRF = bestRF.predict(dados_teste)
+    
+
+'''
+'''
+# Grid Gradient Boost Classifier
+'''
+# Melhores Parametros {'learning_rate': 0.01, 'n_estimators': 500,'max_depth': 4}
+parameters = {
+    #'learning_rate': [0.15,0.1,0.05,0.01,0.005,0.001],
+    #"n_estimators": [100,250,500,750,1000,1250,1500,1750],
+    #'max_depth': [2,3,4,5,6,7]
+    }
+
+grid = GridSearchCV(GradientBoostingClassifier(learning_rate = 0.01, n_estimators = 500, max_depth=4, min_samples_split=2, min_samples_leaf=1), parameters, cv=4, verbose=2, n_jobs = -1)
+grid.fit(X, y)
+'''
+'''
+# Gradient Boost Classifier
+
+classificadorGB = GradientBoostingClassifier(loss='exponential',
+    n_estimators=245,
+    learning_rate=1.0,
+     max_depth=1,
+     random_state=0,
+ max_leaf_nodes=10)
+
+classificadorGB.fit(X,y)
+respostaGB = classificadorGB.predict(dados_teste)
+
+
+# Grid Logistic Regression
+
+# Melhores Parametros {'C': 0.1, 'solver': 'lbfgs'}
+parameters = {
+    'solver': ['newton-cg', 'lbfgs', 'liblinear'],
+    #"penalty": [100,250,500,750,1000,1250,1500,1750],
+    'C': [100, 10, 1.0, 0.1, 0.01]
+    }
+
+grid = GridSearchCV(LogisticRegression(max_iter = 1000000), parameters, cv=100, verbose=2, n_jobs = -1)
+grid.fit(X, y)
+
+'''
+'''
+# Logistic Regression
+
+classificadorLR = LogisticRegression(C= 1.0, solver='liblinear', max_iter = 10000000)
+classificadorLR.fit(X,y)
+respostaLR = classificadorLR.predict(dados_teste)
+'''
+
 
 # Confusion Matrix
 
 # Resposta para csv
 resposta_final = respostaRF
 
-exemplo['inadimplente'] = resposta_final
+exemplo['inadimplente'] = respostaRF
 exemplo.to_csv('resposta1.csv', index= False)
