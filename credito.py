@@ -122,7 +122,7 @@ for coluna in ['possui_telefone_residencial',
 
 for coluna in dados.columns:
     if coluna != 'inadimplente' and dados[coluna].dtype != 'O':
-        print("Diferença de " + coluna)
+        print("Diferença nas médias de " + coluna)
         print(abs(dados.groupby('inadimplente').mean()[coluna][0] - dados.groupby('inadimplente').mean()[coluna][1])*(100/dados.groupby('inadimplente').mean()[coluna][1]))
         print('\n')
 
@@ -135,10 +135,10 @@ atributos_selecionados = [ 'dia_vencimento',
                           # 'estado_onde_reside',
                            'possui_telefone_residencial',
                            'meses_na_residencia',
-                           'possui_email',
+                          # 'possui_email',
                            'renda_mensal_regular',
                            'renda_extra',
-                           'possui_cartao_visa',
+                          # 'possui_cartao_visa',
                            'possui_cartao_mastercard',
                            'possui_cartao_diners',
                            'possui_cartao_amex',
@@ -146,14 +146,14 @@ atributos_selecionados = [ 'dia_vencimento',
                            'qtde_contas_bancarias',
                            'valor_patrimonio_pessoal',
                            'possui_carro',
-                           'vinculo_formal_com_empresa',
+                           # 'vinculo_formal_com_empresa',
                            'possui_telefone_trabalho',
                            'grau_instrucao_companheiro',
-                           'produto_solicitado_1',
-                           'produto_solicitado_2',
+                           # 'produto_solicitado_1',
+                           # 'produto_solicitado_2',
                            'produto_solicitado_7',
                            'forma_envio_solicitacao_correio',
-                           'forma_envio_solicitacao_internet',
+                           # 'forma_envio_solicitacao_internet',
                            'forma_envio_solicitacao_presencial',
                            'sexo_F',
                            'sexo_M',
@@ -166,9 +166,9 @@ atributos_selecionados = [ 'dia_vencimento',
                            'estado_civil_5',
                            'estado_civil_6',
                            'estado_civil_7',
-                           'nacionalidade_0',
-                           'nacionalidade_1',
-                           'nacionalidade_2',
+                           # 'nacionalidade_0',
+                           # 'nacionalidade_1',
+                           # 'nacionalidade_2',
                            'tipo_residencia_0.0',
                            'tipo_residencia_1.0',
                            'tipo_residencia_2.0',
@@ -289,8 +289,7 @@ parameters = {
     "max_depth":[8],
     "max_features": ['auto'],
     "n_estimators": [500],
-    "min_samples_leaf":[10],
-    "min_samples_split":[12,13,14,15,16,17]
+    "min_samples_leaf":[10]
     }
 
 gridRF = GridSearchCV(RandomForestClassifier(), parameters, cv=10, verbose=2, n_jobs = -1)
