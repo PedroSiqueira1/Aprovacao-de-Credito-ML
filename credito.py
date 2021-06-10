@@ -199,16 +199,16 @@ X_train, X_test, y_train,y_test = train_test_split(X,y, train_size=15000, random
 
 # Ajustar escala
 
-scaler = MinMaxScaler()
-scaler.fit(X_train)
-
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
-
-scaler = MinMaxScaler()
-scaler.fit(X)
-X = scaler.transform(X)
-dados_teste = scaler.transform(dados_teste)
+    scaler = MinMaxScaler()
+    scaler.fit(X_train)
+    
+    X_train = scaler.transform(X_train)
+    X_test = scaler.transform(X_test)
+    
+    scaler = MinMaxScaler()
+    scaler.fit(X)
+    X = scaler.transform(X)
+    dados_teste = scaler.transform(dados_teste)
 
 # Função para ver resultados
 
